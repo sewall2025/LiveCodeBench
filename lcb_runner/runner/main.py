@@ -1,9 +1,12 @@
 import os
+import sys
 import json
+
+import requests
 
 from lcb_runner.runner.parser import get_args
 from lcb_runner.utils.scenarios import Scenario
-from lcb_runner.lm_styles import LanguageModelStore
+from lcb_runner.lm_styles import LanguageModel, LanguageModelStore, LMStyle
 from lcb_runner.runner.runner_utils import build_runner
 from lcb_runner.utils.path_utils import get_output_path
 from lcb_runner.evaluation import extract_instance_results
@@ -15,10 +18,59 @@ from lcb_runner.runner.scenario_router import (
 )
 
 
+def validate_model_on_remote(model_name, base_url, api_key):
+    """通过 /v1/models 端点验证模型是否存在于远程服务中。"""
+    api_key = api_key or os.environ.get("OPENAI_API_KEY", "no-key-provided")
+    headers = {"Authorization": f"Bearer {api_key}"}
+    try:
+        response = requests.get(f"{base_url}/models", headers=headers, timeout=10)
+        response.raise_for_status()
+        models_data = response.json()
+        available_models = [m["id"] for m in models_data.get("data", [])]
+        if model_name not in available_models:
+            print(
+                f"错误：模型 '{model_name}' 在远程服务 ({base_url}) 中不可用。\n"
+                f"可用模型：{available_models}"
+            )
+            sys.exit(1)
+    except requests.ConnectionError:
+        print(f"错误：无法连接到 {base_url}，请检查服务是否运行。")
+        sys.exit(1)
+    except requests.RequestException as e:
+        print(f"错误：查询 {base_url}/models 失败：{e}")
+        sys.exit(1)
+
+
+def resolve_model(args):
+    """根据命令行参数解析模型对象。"""
+    if args.base_url:
+        # 提供了 --base-url，进入 OpenAI 兼容模式
+        if args.model not in LanguageModelStore:
+            # 未注册模型，通过远程 API 验证
+            validate_model_on_remote(args.model, args.base_url, args.api_key)
+
+        return LanguageModel(
+            model_name=args.model,
+            model_repr=args.model,
+            model_style=LMStyle.OpenAICompatible,
+            release_date=None,
+        )
+    else:
+        # 未提供 --base-url，走原有逻辑
+        if args.model not in LanguageModelStore:
+            print(
+                f"错误：模型 '{args.model}' 未在 LanguageModelStore 中注册。\n"
+                f"提示：使用 --base-url 参数指定 OpenAI 兼容 API 端点。\n"
+                f"例如：python -m lcb_runner.runner.main --model {args.model} --base-url http://localhost:11434/v1"
+            )
+            sys.exit(1)
+        return LanguageModelStore[args.model]
+
+
 def main():
     args = get_args()
 
-    model = LanguageModelStore[args.model]
+    model = resolve_model(args)
     benchmark, format_prompt = build_prompt_benchmark(args)
     if args.debug:
         print(f"Running with {len(benchmark)} instances in debug mode")

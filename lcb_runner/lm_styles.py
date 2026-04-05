@@ -34,6 +34,8 @@ class LMStyle(Enum):
 
     TogetherAI = "TogetherAI"
 
+    OpenAICompatible = "OpenAICompatible"
+
 
 @dataclass
 class LanguageModel:

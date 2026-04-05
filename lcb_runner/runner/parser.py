@@ -132,6 +132,19 @@ def get_args():
         help="End date for the contest to filter the evaluation file (format - YYYY-MM-DD)",
     )
 
+    parser.add_argument(
+        "--base-url",
+        type=str,
+        default=None,
+        help="OpenAI 兼容 API 的基础 URL（例如 http://localhost:11434/v1）",
+    )
+    parser.add_argument(
+        "--api-key",
+        type=str,
+        default=None,
+        help="OpenAI 兼容 API 的密钥（覆盖默认环境变量）",
+    )
+
     args = parser.parse_args()
 
     args.stop = args.stop.split(",")
