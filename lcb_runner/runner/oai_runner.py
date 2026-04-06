@@ -72,7 +72,7 @@ class OpenAIRunner(BaseRunner):
 
         if n == 0:
             print("Max retries reached. Returning empty response.")
-            return []
+            return [""] * self.args.n
 
         # 根据是否存在 instance_client 选择客户端
         client = getattr(self, "instance_client", None) or OpenAIRunner._get_default_client()
