@@ -67,7 +67,7 @@ class OpenAIRunner(BaseRunner):
                 # "stop": args.stop, --> stop is only used for base models currently
             }
 
-    def _run_single(self, prompt: list[dict[str, str]], n: int = 10) -> list[str]:
+    def _run_single(self, prompt: list[dict[str, str]], n: int = 1) -> list[str]:
         assert isinstance(prompt, list)
 
         if n == 0:
@@ -95,9 +95,9 @@ class OpenAIRunner(BaseRunner):
             print("Exception: ", repr(e))
             if hasattr(self, "instance_client"):
                 print(f"连接端点：{self.instance_client.base_url}")
-            print("Sleeping for 30 seconds...")
+            print("Sleeping for 5 seconds...")
             print("Consider reducing the number of parallel processes.")
-            sleep(30)
+            sleep(5)
             return self._run_single(prompt, n=n - 1)
         except Exception as e:
             print(f"Failed to run the model for {prompt}!")
